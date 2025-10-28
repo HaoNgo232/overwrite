@@ -175,28 +175,53 @@ export const addDecorationsToTree = (
 }
 
 // Helper function to filter tree items based on a search query, keeping ancestors of matched items
+// Now searches the ENTIRE tree regardless of expand state and auto-expands folders with matches
 export const filterTreeData = (
 	items: VscodeTreeItem[],
 	query: string,
 ): VscodeTreeItem[] => {
 	if (!query) return items
 	const lowerQuery = query.toLowerCase()
-	return items.reduce((acc: VscodeTreeItem[], item) => {
+
+	// Recursive function that searches entire tree and marks folders to expand
+	const searchAndExpand = (item: VscodeTreeItem): VscodeTreeItem | null => {
 		const label = item.label || ''
 		const labelMatches = label.toLowerCase().includes(lowerQuery)
+
+		// For folders, recursively search all children regardless of current open state
 		let filteredSubs: VscodeTreeItem[] | undefined
+		let hasMatchingDescendants = false
+
 		if (item.subItems && item.subItems.length > 0) {
-			filteredSubs = filterTreeData(item.subItems, query)
+			filteredSubs = item.subItems
+				.map(searchAndExpand)
+				.filter((child): child is VscodeTreeItem => child !== null)
+			hasMatchingDescendants = filteredSubs.length > 0
 		}
+
+		// Include item if:
+		// 1. Its label matches, OR
+		// 2. It has matching descendants (and we need to show the path to them)
 		if (labelMatches) {
-			// If label matches, include entire subtree
-			acc.push(item)
-		} else if (filteredSubs && filteredSubs.length > 0) {
-			// If any descendants match, include item with filtered children
-			acc.push({ ...item, subItems: filteredSubs })
+			// Label matches - include entire subtree and keep original expand state
+			return item
 		}
-		return acc
-	}, [])
+		if (hasMatchingDescendants) {
+			// Has matching descendants - include with filtered children and FORCE EXPAND
+			return {
+				...item,
+				subItems: filteredSubs,
+				open: true, // Auto-expand folders containing matches
+			}
+		}
+
+		// No match found in this branch
+		return null
+	}
+
+	return items
+		.map(searchAndExpand)
+		.filter((item): item is VscodeTreeItem => item !== null)
 }
 
 // Helper function to recursively add actions to tree data

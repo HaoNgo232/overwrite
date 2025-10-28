@@ -34,6 +34,19 @@ const ContextTab: React.FC<ContextTabProps> = ({
 }) => {
 	const [userInstructions, setUserInstructions] = useState('')
 	const [searchQuery, setSearchQuery] = useState('')
+
+	// Keyboard shortcut: Escape to clear search
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && searchQuery) {
+				setSearchQuery('')
+				e.preventDefault()
+			}
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [searchQuery])
+
 	const [tokenStats, setTokenStats] = useState({
 		fileTokensEstimate: 0,
 		userInstructionsTokens: 0,
@@ -354,7 +367,7 @@ const ContextTab: React.FC<ContextTabProps> = ({
 				/>
 
 				{/* Explorer Top Bar */}
-				<div className="mt-2 mb-2 flex items-center">
+				<div className="mt-2 mb-2 flex items-center gap-2">
 					<vscode-button
 						onClick={handleRefreshClick}
 						disabled={isLoading}
@@ -366,19 +379,31 @@ const ContextTab: React.FC<ContextTabProps> = ({
 						/>
 						{isLoading ? 'Loading...' : 'Refresh'}
 					</vscode-button>
-					<vscode-textfield
-						placeholder="Search files..."
-						className="ml-2 flex-1"
-						value={searchQuery}
-						onInput={(e) =>
-							setSearchQuery((e.target as HTMLInputElement).value)
-						}
-					>
-						<span slot="start" className="codicon codicon-search" />
-					</vscode-textfield>
+					<div className="flex-1 relative">
+						<vscode-textfield
+							placeholder="Search files..."
+							className="ml-2 flex-1"
+							value={searchQuery}
+							onInput={(e) =>
+								setSearchQuery((e.target as HTMLInputElement).value)
+							}
+						>
+							<span slot="start" className="codicon codicon-search" />
+						</vscode-textfield>
+						{searchQuery && (
+							<button
+								type="button"
+								onClick={() => setSearchQuery('')}
+								className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-button-hover rounded"
+								title="Clear search (Esc)"
+								aria-label="Clear search"
+							>
+								<span className="codicon codicon-close text-xs" />
+							</button>
+						)}
+					</div>
 				</div>
-			</div>
-
+			</div>{' '}
 			{/* Scrollable tree area only */}
 			<div
 				data-testid="context-tree-scroll"
@@ -418,7 +443,6 @@ const ContextTab: React.FC<ContextTabProps> = ({
 					</details>
 				)}
 			</div>
-
 			{/* Fixed footer with compact tokens + actions */}
 			<div className="fixed bottom-0 left-0 right-0 border-t bg-bg/95 backdrop-blur px-3 py-2 z-10">
 				<div className="flex items-center gap-3 h-full">

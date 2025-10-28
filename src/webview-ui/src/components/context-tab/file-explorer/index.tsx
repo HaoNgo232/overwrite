@@ -25,6 +25,19 @@ interface FileExplorerProps {
 	actualTokenCounts: Record<string, number>
 }
 
+// Helper to count visible files in filtered tree
+function countVisibleFiles(items: VscodeTreeItem[]): number {
+	let count = 0
+	for (const item of items) {
+		if (!item.subItems || item.subItems.length === 0) {
+			count++
+		} else if (item.subItems) {
+			count += countVisibleFiles(item.subItems)
+		}
+	}
+	return count
+}
+
 type LoadingPhase = 'initial' | 'skeleton' | 'progressive' | 'complete'
 
 const FileExplorer: React.FC<FileExplorerProps> = ({
@@ -258,8 +271,28 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
 		}
 	}
 
+	// Calculate search results count when search is active
+	const searchResultsCount = searchQuery ? countVisibleFiles(visibleItems) : 0
+	const hasSearchResults = searchQuery && searchResultsCount > 0
+
 	return (
 		<div className="flex-1 overflow-auto mb-2 relative">
+			{/* Search results indicator */}
+			{searchQuery && (
+				<div className="sticky top-0 z-10 bg-bg border-b border-border px-2 py-1 text-xs text-muted">
+					{hasSearchResults ? (
+						<span>
+							Found {searchResultsCount} file
+							{searchResultsCount === 1 ? '' : 's'} matching "{searchQuery}"
+						</span>
+					) : (
+						<span className="text-error">
+							No files found matching "{searchQuery}"
+						</span>
+					)}
+				</div>
+			)}
+
 			{renderContent()}
 
 			{/* Refresh overlay - shows when refreshing existing data */}
