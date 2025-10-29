@@ -1,0 +1,33 @@
+{
+  "version": "0.1.0",
+  "environment": "cursor",
+  "initializedPhases": [
+    "requirements",
+    "design",
+    "planning",
+    "implementation",
+    "testing"
+  ],
+  "features": [
+    {
+      "name": "smart-file-selection",
+      "status": "planning",
+      "phases": {
+        "requirements": "completed",
+        "design": "completed",
+        "planning": "completed",
+        "implementation": "not-started",
+        "testing": "not-started"
+      },
+      "docs": {
+        "requirements": "docs/ai/requirements/feature-smart-file-selection.md",
+        "design": "docs/ai/design/feature-smart-file-selection.md",
+        "planning": "docs/ai/planning/feature-smart-file-selection.md",
+        "implementation": "docs/ai/implementation/feature-smart-file-selection.md",
+        "testing": "docs/ai/testing/feature-smart-file-selection.md"
+      }
+    }
+  ],
+  "createdAt": "2025-10-29T03:23:35.667Z",
+  "updatedAt": "2025-10-29T16:45:00.000Z"
+}

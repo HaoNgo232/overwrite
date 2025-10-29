@@ -26,7 +26,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 
 	const buildFixInstructions = (includeOPX: boolean): string[] => {
 		const base = [
-			'# AI Fix Instructions',
+			'# Instructions',
 			'',
 			'Please analyze the errors above and understand the current state of each file.',
 			'',
