@@ -66,7 +66,7 @@ async function runCacheCleanup(context: vscode.ExtensionContext) {
 		)
 		terminal.sendText(`& "${psScriptPath}"`)
 		terminal.sendText(
-			`Write-Host "✅ Done! Reloading window in 3 seconds..." -ForegroundColor Green`,
+			`Write-Host " Done! Reloading window in 3 seconds..." -ForegroundColor Green`,
 		)
 		terminal.sendText('Start-Sleep -Seconds 3')
 		terminal.sendText('code --command workbench.action.reloadWindow')
@@ -81,7 +81,7 @@ async function runCacheCleanup(context: vscode.ExtensionContext) {
 		terminal.sendText(`echo "🔄 Cleaning IDE cache..."`)
 		terminal.sendText(`chmod +x "${scriptPath}"`)
 		terminal.sendText(`"${scriptPath}" --auto`)
-		terminal.sendText(`echo "✅ Done! Reloading window in 3 seconds..."`)
+		terminal.sendText(`echo " Done! Reloading window in 3 seconds..."`)
 		terminal.sendText('sleep 3')
 		terminal.sendText('code --command workbench.action.reloadWindow')
 	}

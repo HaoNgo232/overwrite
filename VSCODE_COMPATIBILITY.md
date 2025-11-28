@@ -40,7 +40,7 @@ pnpm run package
 - Đã cập nhật theo [migration guide](https://github.com/vscode-elements/elements/releases/tag/v2.3.0)
 
 ### Phiên bản đã test
-- ✅ VSCode 1.85.0+ với `@vscode-elements/elements@2.2.0`
+-  VSCode 1.85.0+ với `@vscode-elements/elements@2.2.0`
 - ❌ VSCode 1.95.0+ với `@vscode-elements/elements@2.3.0`
 
 ### Tham khảo

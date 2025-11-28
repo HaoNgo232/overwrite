@@ -305,9 +305,15 @@ function App() {
 		(payload: { excludedFolders: string; readGitignore: boolean }) => {
 			setExcludedFolders(payload.excludedFolders)
 			setReadGitignore(payload.readGitignore)
+
+			//  Save settings to backend
 			sendMessage('saveSettings', payload)
-			// immediately refresh file tree using the saved settings
-			sendMessage('getFileTree', payload)
+
+			//  Auto-refresh tree with new settings for immediate feedback
+			// Small delay to ensure settings are persisted first
+			setTimeout(() => {
+				sendMessage('getFileTree', payload)
+			}, 100)
 		},
 		[sendMessage],
 	)

@@ -25,6 +25,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 	}>(() => ({ excludedFolders, readGitignore }))
 	const [isDirty, setIsDirty] = useState(false)
 	const [showSaved, setShowSaved] = useState(false)
+	const [isApplying, setIsApplying] = useState(false) //  New applying state
 	const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 	// Sync incoming prop to draft and reset dirty when saved externally
@@ -46,21 +47,31 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 
 	const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
 		e.preventDefault()
+
+		//  Show applying state immediately for user feedback
+		setIsApplying(true)
+
 		onSaveSettings({
 			excludedFolders: draft.excludedFolders,
 			readGitignore: draft.readGitignore,
 		})
+
 		setIsDirty(false)
-		// show a brief toast/label
-		setShowSaved(true)
-		if (savedTimerRef.current !== null) {
-			globalThis.clearTimeout(savedTimerRef.current)
-			savedTimerRef.current = null
-		}
-		savedTimerRef.current = globalThis.setTimeout(() => {
-			setShowSaved(false)
-			savedTimerRef.current = null
-		}, 1500)
+
+		//  Show applying feedback, then success message
+		setTimeout(() => {
+			setIsApplying(false)
+			setShowSaved(true)
+
+			if (savedTimerRef.current !== null) {
+				globalThis.clearTimeout(savedTimerRef.current)
+				savedTimerRef.current = null
+			}
+			savedTimerRef.current = globalThis.setTimeout(() => {
+				setShowSaved(false)
+				savedTimerRef.current = null
+			}, 2000) //  Increased to 2s for better visibility
+		}, 600) //  Show applying state for 600ms
 	}
 
 	// Cleanup timer on unmount
@@ -120,7 +131,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 				<div className="sticky bottom-0 left-0 bg-bg border-t border-[var(--vscode-panel-border)] pt-2 pb-2 flex items-center gap-x-3">
 					<vscode-button
 						type="submit"
-						disabled={!isDirty}
+						disabled={!isDirty || isApplying}
 						onClick={(e) => {
 							// In some test/jsdom environments, custom elements don't submit forms by default.
 							// Ensure we requestSubmit on the nearest form for reliability.
@@ -130,10 +141,32 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 							form?.requestSubmit()
 						}}
 					>
-						Save
+						{isApplying ? (
+							<>
+								<span
+									slot="start"
+									className="codicon codicon-loading codicon-modifier-spin"
+								></span>
+								Applying...
+							</>
+						) : (
+							'Save'
+						)}
 					</vscode-button>
+
 					{showSaved && (
-						<span className="text-xs text-muted">Settings saved</span>
+						<span
+							className="text-xs"
+							style={{ color: 'var(--vscode-testing-iconPassed)' }}
+						>
+							Settings applied &amp; tree refreshed
+						</span>
+					)}
+
+					{isApplying && !showSaved && (
+						<span className="text-xs text-muted">
+							🔄 Applying settings and refreshing tree...
+						</span>
 					)}
 				</div>
 			</form>

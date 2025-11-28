@@ -43,7 +43,7 @@ clean_cache() {
         rm -rf "$config_dir/DawnGraphiteCache"
         rm -rf "$config_dir/Service Worker"
         
-        echo "✅ Đã xóa cache của $app_name"
+        echo " Đã xóa cache của $app_name"
     else
         echo "ℹ️  Không tìm thấy thư mục config của $app_name (bỏ qua)"
     fi

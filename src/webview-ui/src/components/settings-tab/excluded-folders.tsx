@@ -53,6 +53,21 @@ const ExcludedFolders: React.FC<ExcludedFoldersProps> = ({
 				}}
 				className="w-full min-h-[60px]"
 			/>
+			<div className="text-xs text-muted mt-1 space-y-1">
+				<p>
+					{' '}
+					Valid: <code>node_modules</code>, <code>dist</code>,{' '}
+					<code>*.log</code>, <code>build/**</code>
+				</p>
+				<p>
+					❌ Invalid: <code>***/folder</code> (triple star),{' '}
+					<code>C:\path</code> (absolute), special chars
+				</p>
+				<p>
+					💡 Tip: Use <code>#</code> for comments. Changes auto-refresh the
+					tree.
+				</p>
+			</div>
 		</div>
 	)
 }

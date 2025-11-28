@@ -49,7 +49,7 @@ function Clean-AppCache {
             }
         }
         
-        Write-Host "✅ Đã xóa cache của $AppName" -ForegroundColor Green
+        Write-Host " Đã xóa cache của $AppName" -ForegroundColor Green
     } else {
         Write-Host "ℹ️  Không tìm thấy thư mục config của $AppName (bỏ qua)" -ForegroundColor Gray
     }

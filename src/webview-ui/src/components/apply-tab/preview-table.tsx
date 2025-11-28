@@ -91,8 +91,8 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 
 	const getRowStatus = (
 		result: RowApplyResult | undefined,
-	): '✅' | '❌' | '⏸️' => {
-		if (result?.success) return '✅'
+	): '' | '❌' | '⏸️' => {
+		if (result?.success) return ''
 		if (result) return '❌'
 		return '⏸️'
 	}
@@ -104,7 +104,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 		if (successRows.length === 0) return []
 
 		const section: string[] = [
-			'## ✅ Successfully Applied Operations',
+			'##  Successfully Applied Operations',
 			'',
 			'**These operations completed successfully. The files listed below have ALREADY been modified.**',
 			'**When fixing failed operations, account for these changes that are now in the codebase.**',
@@ -117,7 +117,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 
 			section.push(
 				`### Row ${result.rowIndex + 1}: ${result.action} \`${result.path}\``,
-				'- Status: ✅ SUCCESS',
+				'- Status:  SUCCESS',
 				`- Operation: ${result.action}`,
 				`- Description: ${row.description}`,
 			)
@@ -243,7 +243,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 		'# Complete Apply Context for AI',
 		'',
 		'## Apply Results Summary',
-		`- ✅ Successful operations: ${successRows.length}`,
+		`-  Successful operations: ${successRows.length}`,
 		`- ❌ Failed operations: ${failedRows.length}`,
 		`- 📊 Total operations: ${allRows.length}`,
 		'',

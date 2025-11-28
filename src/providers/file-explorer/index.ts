@@ -472,56 +472,43 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 		if (!this._view) return
 
 		try {
-			// Cancel any existing tree build operation
+			//  POLICY: "Last Request Wins" - Cancel any in-progress tree build
+			// This ensures Settings changes are reflected immediately instead of being blocked
+
 			if (this._treeBuildAbortController) {
+				console.debug(
+					'[FileExplorer] Cancelling previous tree build for new request',
+				)
 				this._treeBuildAbortController.abort()
 				this._treeBuildAbortController = null
 			}
 
-			// Clear any existing timeout
 			if (this._treeBuildTimeout) {
 				clearTimeout(this._treeBuildTimeout)
 				this._treeBuildTimeout = null
 			}
 
-			if (this._isBuildingTree) {
-				// Set a timeout to prevent infinite blocking
-				this._treeBuildTimeout = setTimeout(() => {
-					this._isBuildingTree = false
-					this._treeBuildTimeout = null
-					if (this._treeBuildAbortController) {
-						this._treeBuildAbortController.abort()
-						this._treeBuildAbortController = null
-					}
-					console.warn('Tree building operation timed out after 30 seconds')
-					this._view?.webview.postMessage({
-						command: 'showError',
-						message: 'Tree building operation timed out. Please try again.',
-					})
-					vscode.window.showErrorMessage(
-						'Tree building operation timed out. Please try again.',
-					)
-				}, 30000) // 30 second timeout
-
-				return
-			}
-
+			//  Reset flag immediately and start new operation
+			// No more blocking - always process the latest request
 			this._isBuildingTree = true
 
 			// Create new abort controller for this operation
 			this._treeBuildAbortController = new AbortController()
 			const signal = this._treeBuildAbortController.signal
 
-			// Set a timeout for this operation
+			//  Reduced timeout from 30s to 10s for better responsiveness
 			const timeoutPromise = new Promise<never>((_, reject) => {
 				this._treeBuildTimeout = setTimeout(() => {
 					reject(
-						new Error('Tree building operation timed out after 30 seconds'),
+						new Error(
+							'Tree building timed out after 10 seconds. ' +
+								'Try: 1) Reduce excluded folders, 2) Disable .gitignore, or 3) Use smaller workspace',
+						),
 					)
-				}, 30000)
+				}, 10000) //  Changed from 30000 to 10000
 			})
 
-			// Race the tree building against the timeout
+			// Parse excluded patterns
 			const excludedFoldersArray = payload?.excludedFolders
 				? payload.excludedFolders
 						.split(/\r?\n/)
@@ -532,8 +519,34 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 						.map((line) => line.trim())
 						.filter((line) => line.length > 0 && !line.startsWith('#'))
 
-			// Combine with default excluded dirs
-			const allExcludedDirs = [...this._excludedDirs, ...excludedFoldersArray]
+			//  Validate patterns to prevent crashes
+			const invalidPatterns: string[] = []
+			const validPatterns = excludedFoldersArray.filter((pattern) => {
+				// Check for dangerous patterns that might crash ignore library
+				if (pattern.includes('***/')) {
+					invalidPatterns.push(`${pattern} (invalid glob: ***/)`)
+					return false
+				}
+				if (pattern.match(/[<>"|?*]/)) {
+					invalidPatterns.push(`${pattern} (contains invalid characters)`)
+					return false
+				}
+				if (require('node:path').isAbsolute(pattern)) {
+					invalidPatterns.push(`${pattern} (absolute paths not allowed)`)
+					return false
+				}
+				return true
+			})
+
+			//  Show validation warnings to user
+			if (invalidPatterns.length > 0) {
+				const errorMsg = `Invalid excluded folder patterns:\n${invalidPatterns.join('\n')}\n\nThese patterns were ignored.`
+				console.warn('[FileExplorer]', errorMsg)
+				vscode.window.showWarningMessage(errorMsg)
+			}
+
+			// Combine with default excluded dirs (use only valid patterns)
+			const allExcludedDirs = [...this._excludedDirs, ...validPatterns]
 
 			const workspaceFiles = await Promise.race([
 				getWorkspaceFileTree(allExcludedDirs, {

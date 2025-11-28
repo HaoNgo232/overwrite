@@ -206,6 +206,9 @@ const FILE_ICONS = {
 	open: 'file', // Placeholder, not typically used for files by tree components
 }
 
+//  Cache for global git excludes path to avoid repeated spawning of git processes
+let cachedGlobalExcludesPath: string | null = null
+
 // Expand common shell-style tokens in paths from git config (e.g., '~/.config/git/ignore').
 function resolveExcludesPath(input: string): string {
 	let p = input.trim()
@@ -377,17 +380,34 @@ export async function getWorkspaceFileTree(
 			}
 
 			// 3) Global excludes file as configured in Git (core.excludesFile)
-			// Attempt to query Git for the actual path; if not available, try common defaults.
+			//  Use cached path to avoid blocking git calls on every tree build
 			try {
-				const excludesPath = execFileSync(
-					'git',
-					['config', '--get', 'core.excludesFile'],
-					{
-						cwd: rootFsPath,
-						encoding: 'utf8',
-						stdio: ['ignore', 'pipe', 'ignore'],
-					},
-				).trim()
+				let excludesPath = cachedGlobalExcludesPath
+
+				// If not cached, try to fetch it once per session
+				if (excludesPath === null) {
+					try {
+						excludesPath = execFileSync(
+							'git',
+							['config', '--get', 'core.excludesFile'],
+							{
+								cwd: rootFsPath,
+								encoding: 'utf8',
+								stdio: ['ignore', 'pipe', 'ignore'],
+								timeout: 1000, //  Fail fast if git hangs
+							},
+						).trim()
+						cachedGlobalExcludesPath = excludesPath
+						console.debug(
+							'[FileSystem] Cached git core.excludesFile:',
+							excludesPath,
+						)
+					} catch {
+						cachedGlobalExcludesPath = '' // Mark as checked but failed/empty
+						excludesPath = ''
+					}
+				}
+
 				if (excludesPath) {
 					const resolved = resolveExcludesPath(excludesPath)
 					if (resolved && fs.existsSync(resolved)) {
