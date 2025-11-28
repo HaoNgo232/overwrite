@@ -411,6 +411,11 @@ function App() {
 		[sendMessage],
 	)
 
+	// Debug: Copy all extension error logs
+	const handleCopyDebugLogs = useCallback(() => {
+		sendMessage('copyDebugLogs')
+	}, [sendMessage])
+
 	return (
 		<main className="h-screen overflow-hidden">
 			<vscode-tabs
@@ -457,6 +462,7 @@ function App() {
 						excludedFolders={excludedFolders}
 						readGitignore={readGitignore}
 						onSaveSettings={handleSaveSettings}
+						onCopyDebugLogs={handleCopyDebugLogs}
 					/>
 				</vscode-tab-panel>
 			</vscode-tabs>

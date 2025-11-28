@@ -9,12 +9,14 @@ interface SettingsTabProps {
 		excludedFolders: string
 		readGitignore: boolean
 	}) => void
+	onCopyDebugLogs?: () => void
 }
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
 	excludedFolders,
 	readGitignore,
 	onSaveSettings,
+	onCopyDebugLogs,
 }) => {
 	// Generic form draft state – scalable for future settings
 	const [draft, setDraft] = useState<{
@@ -92,6 +94,27 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 					onChange={(v) => handleChange('readGitignore', v)}
 					onDraftChange={(v) => handleChange('readGitignore', v)}
 				/>
+
+				{/* Debug Section */}
+				<div className="pt-3 mt-3 border-t border-[var(--vscode-panel-border)]">
+					<vscode-label className="block mb-2">🐛 Debugging</vscode-label>
+					<vscode-button
+						appearance="secondary"
+						type="button"
+						onClick={(e) => {
+							e.preventDefault()
+							onCopyDebugLogs?.()
+						}}
+						className="w-full"
+					>
+						<span slot="start" className="codicon codicon-bug"></span>
+						Copy Error Logs (for AI Context)
+					</vscode-button>
+					<p className="text-xs text-muted mt-1">
+						Copies recent extension errors, stack traces & system info to
+						clipboard. Perfect for pasting to AI chats when debugging issues.
+					</p>
+				</div>
 
 				{/* Sticky footer with bottom-left Save button */}
 				<div className="sticky bottom-0 left-0 bg-bg border-t border-[var(--vscode-panel-border)] pt-2 pb-2 flex items-center gap-x-3">

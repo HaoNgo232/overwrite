@@ -60,7 +60,9 @@ declare module 'react' {
 				hidden?: boolean
 			}
 			'vscode-badge': WebComponentProps<VscodeBadge>
-			'vscode-button': WebComponentProps<VscodeButton>
+			'vscode-button': WebComponentProps<VscodeButton> & {
+				appearance?: 'primary' | 'secondary' | 'icon'
+			}
 			'vscode-checkbox': WebComponentProps<VscodeCheckbox>
 			'vscode-checkbox-group': WebComponentProps<VscodeCheckboxGroup>
 			'vscode-collapsible': WebComponentProps<VscodeCollapsible> & {

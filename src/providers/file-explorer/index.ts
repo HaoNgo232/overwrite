@@ -6,6 +6,7 @@ import {
 	generateFileMap,
 	generatePrompt,
 } from '../../prompts'
+import { errorLogger } from '../../services/error-logger'
 import { telemetry } from '../../services/telemetry'
 import {
 	clearCache,
@@ -131,7 +132,17 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 								stack?: string
 								context?: string
 							}
-							telemetry.trackUnhandled('webview', new Error(errorData.error))
+							const err = new Error(errorData.error)
+							if (errorData.stack) err.stack = errorData.stack
+
+							// Log to error buffer for debug context
+							errorLogger.log(
+								'webview',
+								errorData.context || 'unknown webview error',
+								err,
+							)
+
+							telemetry.trackUnhandled('webview', err)
 						} catch (e) {
 							console.warn('[telemetry] failed to track webview error', e)
 						}
@@ -201,6 +212,9 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 						await this._handleCopyApplyErrors(
 							message.payload as { text: string },
 						)
+						break
+					case 'copyDebugLogs':
+						await this._handleCopyDebugLogs()
 						break
 					case 'refreshAfterApply':
 						// Refresh tree và clean invalid selections
@@ -349,9 +363,27 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 		error: unknown,
 		contextMessage = 'An error occurred',
 	): void {
+		// Log to error buffer for debug context
+		errorLogger.log('backend', contextMessage, error)
+
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		console.error(`${contextMessage}:`, error)
 		vscode.window.showErrorMessage(`${contextMessage}: ${errorMessage}`)
+	}
+
+	private async _handleCopyDebugLogs(): Promise<void> {
+		try {
+			const logs = errorLogger.getFormattedLogs()
+			await vscode.env.clipboard.writeText(logs)
+			const count = errorLogger.getLogCount()
+			vscode.window.showInformationMessage(
+				count > 0
+					? `Copied ${count} error log(s) to clipboard! 🐛`
+					: "No errors to copy (that's good!)",
+			)
+		} catch (error) {
+			this._handleError(error, 'Failed to copy debug logs')
+		}
 	}
 
 	/**
