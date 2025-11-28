@@ -58,7 +58,7 @@ const cache = new Map<string, CacheEntry>()
 function isValidCacheEntry(entry: unknown): entry is CacheEntry {
 	if (!entry || typeof entry !== 'object') return false
 	const e = entry as Record<string, unknown>
-	
+
 	// Type checks
 	if (
 		typeof e.mtime !== 'number' ||
@@ -69,11 +69,10 @@ function isValidCacheEntry(entry: unknown): entry is CacheEntry {
 	) {
 		return false
 	}
-	
+
 	// Value validation - reject NaN, Infinity, and negative values
-	const isValidNumber = (n: number) => 
-		Number.isFinite(n) && n >= 0
-	
+	const isValidNumber = (n: number) => Number.isFinite(n) && n >= 0
+
 	return (
 		isValidNumber(e.mtime as number) &&
 		isValidNumber(e.size as number) &&

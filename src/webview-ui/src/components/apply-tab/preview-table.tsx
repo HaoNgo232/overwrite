@@ -31,7 +31,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 			'# 🎯 ROLE: Expert Code Patcher',
 			'',
 			'You are a specialist at fixing failed file operations. The operations above failed because:',
-			'- **Search mismatches**: `<find>` blocks didn\'t match current file content',
+			"- **Search mismatches**: `<find>` blocks didn't match current file content",
 			'- **Cascade failures**: Previous successful operations changed files, breaking later patterns',
 			'',
 			'## CRITICAL RULES',
@@ -252,13 +252,13 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 		failedRows: RowApplyResult[],
 		allRows: RowApplyResult[],
 	): string[] => [
-			'# 🔧 Apply Operation Failures',
-			'',
-			`**Results**: ✅ ${successRows.length} success, ❌ ${failedRows.length} failed (${Math.round((successRows.length / allRows.length) * 100)}% success rate)`,
-			'',
-			'---',
-			'',
-		]
+		'# 🔧 Apply Operation Failures',
+		'',
+		`**Results**: ✅ ${successRows.length} success, ❌ ${failedRows.length} failed (${Math.round((successRows.length / allRows.length) * 100)}% success rate)`,
+		'',
+		'---',
+		'',
+	]
 
 	const buildFailedOperationsSection = (
 		fileErrors: Map<

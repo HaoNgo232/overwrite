@@ -2,10 +2,10 @@ import type { VscTabsSelectEvent } from '@vscode-elements/elements/dist/vscode-t
 import { useCallback, useEffect, useState } from 'react'
 import type { VscodeTreeItem } from './types' // Import tree item type from local types
 import './App.css'
+import ErrorBoundary from './components/ErrorBoundary'
 import ApplyTab from './components/apply-tab/index'
 import ContextTab from './components/context-tab'
 import { getAllDescendantPaths } from './components/context-tab/utils'
-import ErrorBoundary from './components/ErrorBoundary'
 import SettingsTab from './components/settings-tab'
 import { getVsCodeApi } from './utils/vscode' // Import the new utility
 

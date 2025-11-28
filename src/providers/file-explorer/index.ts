@@ -316,7 +316,10 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	private async _resolvePathToUriSafe(p: string, root?: string): Promise<vscode.Uri> {
+	private async _resolvePathToUriSafe(
+		p: string,
+		root?: string,
+	): Promise<vscode.Uri> {
 		// Reuse existing resolver via xml-parser path resolver used in file-action-handler
 		// Minimal duplication to avoid cross-file refactor
 		try {
@@ -529,7 +532,9 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 				}
 				// Allow * and ? for glob patterns, only reject truly invalid characters
 				if (pattern.match(/[<>"|]/)) {
-					invalidPatterns.push(`${pattern} (contains invalid characters: < > " |)`)
+					invalidPatterns.push(
+						`${pattern} (contains invalid characters: < > " |)`,
+					)
 					return false
 				}
 				if (require('node:path').isAbsolute(pattern)) {
