@@ -45,7 +45,10 @@ export async function applyFileActions(
 	for (const fileAction of fileActions) {
 		try {
 			// Resolve XML path (supports absolute, file://, or workspace-relative with optional root)
-			const fileUri = resolveXmlPathToUri(fileAction.path, fileAction.root)
+			const fileUri = await resolveXmlPathToUri(
+				fileAction.path,
+				fileAction.root,
+			)
 
 			switch (fileAction.action) {
 				case 'create':
@@ -475,7 +478,10 @@ async function handleRenameAction(
 			throw new Error('Missing new path for rename operation.')
 		}
 		// Resolve new path relative to same workspace root if provided
-		const newUri = resolveXmlPathToUri(fileAction.newPath, fileAction.root)
+		const newUri = await resolveXmlPathToUri(
+			fileAction.newPath,
+			fileAction.root,
+		)
 
 		await ensureFileExists(
 			fileUri,

@@ -7,6 +7,16 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [0.0.3] - 2025-01-XX
 
 ### Added
+- **Utility script**: `scripts/clean-cache.sh` để tự động xóa IDE cache khi gặp lỗi
+- Cache validation system với version tracking để detect corrupted entries
+- Comprehensive troubleshooting guide trong README
+- CSP restrictions để prevent Service Worker registration trong webview
+
+### Fixed
+- **Critical**: Fixed webview loading errors sau khi IDE crashes/tắt đột ngột
+- **Critical**: Disabled PostHog Service Worker để prevent InvalidStateError
+- Auto-removal của corrupted cache entries với validation
+- Improved error recovery và cleanup mechanisms
 - File tree exploration with gitignore support
 - XML prompt generation for LLMs
 - File operation application (create/modify/delete/rename)

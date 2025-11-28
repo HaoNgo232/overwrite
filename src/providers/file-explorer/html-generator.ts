@@ -135,12 +135,15 @@ function getProdHtml(
 	)
 
 	// CSP for production: More restrictive
+	// CRITICAL: Explicitly deny worker-src to prevent Service Worker registration
 	const csp = [
 		`default-src 'none'`,
 		`font-src ${cspSource}`, // Only allow fonts from VS Code source
 		`img-src ${cspSource} https: data:`, // Allow images from VS Code source, https, data URIs
 		`script-src 'nonce-${nonce}'`, // Only allow scripts with the specific nonce
-		`style-src ${cspSource} 'unsafe-inline'`, // Allow styles from VS Code source and inline styles (check if needed)
+		`style-src ${cspSource} 'unsafe-inline'`, // Allow styles from VS Code source and inline styles
+		`worker-src 'none'`, // Explicitly deny workers to prevent Service Worker
+		`child-src 'none'`, // Deny iframes and workers
 	].join('; ')
 
 	return `<!DOCTYPE html>

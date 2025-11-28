@@ -268,6 +268,11 @@ const ContextTab: React.FC<ContextTabProps> = ({
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
+			// Guard against processing after component unmount
+			if (!isMountedRef.current) {
+				return
+			}
+
 			const message = event.data
 			if (message.command !== 'updateTokenCounts') {
 				return
@@ -288,8 +293,25 @@ const ContextTab: React.FC<ContextTabProps> = ({
 
 			processTokenCountsUpdate(incoming, incomingSkipped)
 		}
+
 		window.addEventListener('message', handleMessage)
-		return () => window.removeEventListener('message', handleMessage)
+
+		return () => {
+			// Comprehensive cleanup on unmount
+			window.removeEventListener('message', handleMessage)
+
+			// Cancel any pending token requests
+			cancelPendingTokenRequests()
+
+			// Clear any pending timeouts
+			if (tokenRequestRef.current !== null) {
+				clearTimeout(tokenRequestRef.current)
+				tokenRequestRef.current = null
+			}
+
+			// Mark as unmounted
+			isMountedRef.current = false
+		}
 	}, [isStaleResponse, processTokenCountsUpdate])
 
 	const handleRefreshClick = useCallback(() => {

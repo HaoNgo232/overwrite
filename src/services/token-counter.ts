@@ -45,9 +45,30 @@ interface CacheEntry {
 	size: number
 	tokens: number
 	lastAccessed: number
+	version: number // Add version to invalidate old cache format
 }
 
+const CACHE_VERSION = 1 // Increment this when cache format changes
 const cache = new Map<string, CacheEntry>()
+
+/**
+ * Validate cache entry to detect corruption
+ */
+function isValidCacheEntry(entry: unknown): entry is CacheEntry {
+	if (!entry || typeof entry !== 'object') return false
+	const e = entry as Record<string, unknown>
+	return (
+		typeof e.mtime === 'number' &&
+		typeof e.size === 'number' &&
+		typeof e.tokens === 'number' &&
+		typeof e.lastAccessed === 'number' &&
+		e.version === CACHE_VERSION &&
+		!Number.isNaN(e.mtime) &&
+		!Number.isNaN(e.size) &&
+		!Number.isNaN(e.tokens) &&
+		!Number.isNaN(e.lastAccessed)
+	)
+}
 
 /**
  * Cleanup old cache entries to prevent memory leaks
@@ -106,8 +127,31 @@ startCleanupInterval()
  * Shutdown the token counter (cleanup resources)
  */
 export function shutdown(): void {
-	stopCleanupInterval()
-	clearCache()
+	console.log('[TokenCounter] Shutting down - clearing cache and intervals')
+
+	try {
+		stopCleanupInterval()
+		clearCache()
+
+		// Ensure cleanup interval is completely stopped
+		if (cleanupInterval !== null) {
+			clearInterval(cleanupInterval)
+			cleanupInterval = null
+		}
+
+		console.log('[TokenCounter] Shutdown completed successfully')
+	} catch (error) {
+		console.error('[TokenCounter] Error during shutdown:', error)
+		// Continue cleanup even if there are errors
+		try {
+			if (cleanupInterval !== null) {
+				clearInterval(cleanupInterval)
+				cleanupInterval = null
+			}
+		} catch (e) {
+			console.error('[TokenCounter] Failed to clear interval:', e)
+		}
+	}
 }
 
 /**
@@ -128,13 +172,19 @@ export async function countTokens(uri: vscode.Uri): Promise<number> {
 		const mtime = Math.floor(stats.mtime.getTime() / 1000)
 		const size = stats.size
 
-		// 1️⃣ Cache hit?
+		// 1️⃣ Cache hit with validation?
 		const key = uri.fsPath
 		const entry = cache.get(key)
-		if (entry && entry.mtime === mtime && entry.size === size) {
-			// Update last accessed timestamp
-			entry.lastAccessed = Date.now()
-			return entry.tokens
+		if (entry && isValidCacheEntry(entry)) {
+			if (entry.mtime === mtime && entry.size === size) {
+				// Update last accessed timestamp
+				entry.lastAccessed = Date.now()
+				return entry.tokens
+			}
+		} else if (entry) {
+			// Remove corrupted entry
+			cache.delete(key)
+			console.warn('[TokenCounter] Removed corrupted cache entry:', key)
 		}
 
 		// 2️⃣ Safeguards
@@ -191,7 +241,13 @@ export async function countTokens(uri: vscode.Uri): Promise<number> {
 
 			stream.on('end', () => {
 				if (!hasError) {
-					cache.set(key, { mtime, size, tokens, lastAccessed: Date.now() })
+					cache.set(key, {
+						mtime,
+						size,
+						tokens,
+						lastAccessed: Date.now(),
+						version: CACHE_VERSION,
+					})
 					resolve(tokens)
 				}
 			})
@@ -300,7 +356,13 @@ export async function countTokensWithInfo(uri: vscode.Uri): Promise<{
 
 				stream.on('end', () => {
 					if (!hasError) {
-						cache.set(key, { mtime, size, tokens, lastAccessed: Date.now() })
+						cache.set(key, {
+							mtime,
+							size,
+							tokens,
+							lastAccessed: Date.now(),
+							version: CACHE_VERSION,
+						})
 						resolve({ tokens })
 					}
 				})

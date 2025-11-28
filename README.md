@@ -61,3 +61,33 @@ For complete details, see [TELEMETRY.md](TELEMETRY.md).
 ## Acknowledgments
 
 This project is heavily inspired by [RepoPrompt](https://repoprompt.com/) by @provencher.
+
+## Troubleshooting
+
+### ❌ Lỗi: "Could not register service worker"
+
+Nếu extension không load được sau khi tắt IDE đột ngột:
+
+> "Error loading webview: Error: Could not register service worker: InvalidStateError"
+
+**Nguyên nhân**: Cache của VS Code/Cursor bị corrupted khi tắt đột ngột.
+
+**Giải pháp nhanh**:
+```bash
+# 1. Tắt hoàn toàn IDE
+# 2. Chạy script tự động (khuyến nghị):
+chmod +x scripts/clean-cache.sh
+./scripts/clean-cache.sh
+
+# 3. Hoặc xóa thủ công:
+# Linux/Mac: rm -rf ~/.config/Code/Cache ~/.config/Cursor/Cache
+# Windows: xóa %APPDATA%\Code\Cache và %APPDATA%\Cursor\Cache
+```
+
+**Nếu vẫn lỗi**:
+- Thử: `Ctrl/Cmd + Shift + P` → "Developer: Reload Window"
+- Reinstall extension từ marketplace
+
+### 🔧 Các lỗi khác
+
+Xem thêm tại [VSCODE_COMPATIBILITY.md](VSCODE_COMPATIBILITY.md) để biết các vấn đề tương thích đã biết.

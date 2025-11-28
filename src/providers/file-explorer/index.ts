@@ -355,6 +355,31 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 	}
 
 	/**
+	 * Cleanup resources when provider is disposed
+	 */
+	public dispose(): void {
+		console.log('[FileExplorerWebviewProvider] Disposing resources...')
+
+		// Cancel any ongoing tree build operations
+		if (this._treeBuildAbortController) {
+			this._treeBuildAbortController.abort()
+			this._treeBuildAbortController = null
+		}
+
+		// Clear any pending timeouts
+		if (this._treeBuildTimeout) {
+			clearTimeout(this._treeBuildTimeout)
+			this._treeBuildTimeout = null
+		}
+
+		// Reset state
+		this._fullTreeCache = []
+		this._isBuildingTree = false
+
+		console.log('[FileExplorerWebviewProvider] Disposal completed')
+	}
+
+	/**
 	 * Handles saving excluded folders to workspace state.
 	 */
 	private async _handleSaveExcludedFolders(payload: {

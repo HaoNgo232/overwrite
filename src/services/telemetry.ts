@@ -41,7 +41,12 @@ class TelemetryService {
 			return
 		}
 
-		this.client = new PostHog(apiKey, { host: 'https://us.i.posthog.com' })
+		this.client = new PostHog(apiKey, {
+			host: 'https://us.i.posthog.com',
+			// Node.js SDK doesn't support browser-specific features like
+			// web experiments, session recording, or surveys by default
+			// These are only available in the JavaScript (browser) SDK
+		})
 
 		// Persist anonymous id; never use VS Code machineId directly
 		this.distinctId = context.globalState.get<string>('telemetryDistinctId')

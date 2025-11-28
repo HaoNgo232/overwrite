@@ -11,10 +11,10 @@ import * as vscode from 'vscode'
  *
  * Throws if the path cannot be resolved into a workspace folder or is outside the workspace.
  */
-export function resolveXmlPathToUri(
+export async function resolveXmlPathToUri(
 	specPath: string,
 	root?: string,
-): vscode.Uri {
+): Promise<vscode.Uri> {
 	// Handle file:// URIs directly
 	if (specPath.startsWith('file://')) {
 		const uri = vscode.Uri.parse(specPath)
@@ -70,9 +70,9 @@ export function resolveXmlPathToUri(
 		for (const folder of folders) {
 			const candidateUri = vscode.Uri.joinPath(folder.uri, normalized)
 			try {
-				// Use VS Code's synchronous file system check
-				const stat = vscode.workspace.fs.stat(candidateUri)
-				// If we get here without throwing, file exists
+				// FIX: Properly await the async stat call
+				await vscode.workspace.fs.stat(candidateUri)
+				// File exists - add to candidates
 				candidateUris.push(candidateUri)
 				candidateFolders.push(folder.name)
 			} catch {

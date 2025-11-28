@@ -41,7 +41,13 @@
         }
       ]
     },
-    "commands": []
+    "commands": [
+      {
+        "command": "overwrite.cleanCache",
+        "title": "Overwrite: Fix Webview Issues (Clean Cache)",
+        "category": "Overwrite"
+      }
+    ]
   },
   "scripts": {
     "vscode:package": "pnpm run package && pnpm vsce package --no-dependencies",

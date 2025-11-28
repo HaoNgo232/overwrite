@@ -147,4 +147,4 @@ export async function fetchUser(id: string) {
 - Do not mix move with other operations for the same file in one edit.
 - **In multi-root workspaces, ALWAYS specify root attribute to prevent ambiguous path errors**
 
-</opx_instructions>\``;
+</opx_instructions>\``
