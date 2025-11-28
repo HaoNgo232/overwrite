@@ -127,22 +127,9 @@ async function handleCreateAction(
 			// createDirectory is idempotent - directory may already exist
 		}
 
-		// If the file already exists, treat create as a no-op for idempotency
-		try {
-			await vscode.workspace.fs.stat(fileUri)
-			results.push({
-				path: fileAction.path,
-				action: 'create',
-				success: true,
-				message: 'File already exists (skipped create)',
-			})
-			return
-		} catch {
-			// not exists, continue to create
-		}
-
+		// Use atomic createFile with ignoreIfExists to handle race conditions
 		const edit = new vscode.WorkspaceEdit()
-		edit.createFile(fileUri, { overwrite: false, ignoreIfExists: false })
+		edit.createFile(fileUri, { overwrite: false, ignoreIfExists: true })
 		edit.insert(fileUri, new vscode.Position(0, 0), content)
 		const applied = await vscode.workspace.applyEdit(edit)
 

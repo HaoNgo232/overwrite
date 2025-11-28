@@ -231,10 +231,9 @@ function extractBetweenMarkers(
 	// If a line contains only ">" or ">>", treat it as the closing marker ">>>".
 	let s = text.trim()
 	// Repair before searching for markers; operate on full-line matches only.
+	// Removed risky single-char replacements to prevent accidental code modification
 	s = s
-		.replaceAll(/^[ \t]*<\s*$/gm, '<<<')
 		.replaceAll(/^[ \t]*<<\s*$/gm, '<<<')
-		.replaceAll(/^[ \t]*>\s*$/gm, '>>>')
 		.replaceAll(/^[ \t]*>>\s*$/gm, '>>>')
 
 	const first = s.indexOf(start)

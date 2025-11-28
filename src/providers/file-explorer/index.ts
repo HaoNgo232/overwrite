@@ -316,13 +316,13 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	private _resolvePathToUriSafe(p: string, root?: string): vscode.Uri {
+	private async _resolvePathToUriSafe(p: string, root?: string): Promise<vscode.Uri> {
 		// Reuse existing resolver via xml-parser path resolver used in file-action-handler
 		// Minimal duplication to avoid cross-file refactor
 		try {
 			// Prefer the public resolver if available
 			const { resolveXmlPathToUri } = require('../../utils/path-resolver')
-			return resolveXmlPathToUri(p, root)
+			return await resolveXmlPathToUri(p, root)
 		} catch {
 			// Fallback: try to resolve as workspace-relative or absolute
 			if (path.isAbsolute(p)) return vscode.Uri.file(p)
@@ -527,8 +527,9 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 					invalidPatterns.push(`${pattern} (invalid glob: ***/)`)
 					return false
 				}
-				if (pattern.match(/[<>"|?*]/)) {
-					invalidPatterns.push(`${pattern} (contains invalid characters)`)
+				// Allow * and ? for glob patterns, only reject truly invalid characters
+				if (pattern.match(/[<>"|]/)) {
+					invalidPatterns.push(`${pattern} (contains invalid characters: < > " |)`)
 					return false
 				}
 				if (require('node:path').isAbsolute(pattern)) {
@@ -1152,7 +1153,7 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 		targetAction: FileAction,
 	): Promise<vscode.Uri | null> {
 		try {
-			const uri = this._resolvePathToUriSafe(
+			const uri = await this._resolvePathToUriSafe(
 				targetAction.path,
 				targetAction.root,
 			)

@@ -5,6 +5,7 @@ import './App.css'
 import ApplyTab from './components/apply-tab/index'
 import ContextTab from './components/context-tab'
 import { getAllDescendantPaths } from './components/context-tab/utils'
+import ErrorBoundary from './components/ErrorBoundary'
 import SettingsTab from './components/settings-tab'
 import { getVsCodeApi } from './utils/vscode' // Import the new utility
 
@@ -433,17 +434,19 @@ function App() {
 					Context
 				</vscode-tab-header>
 				<vscode-tab-panel id="context-tab-panel">
-					<ContextTab
-						// Props for original Context functionality
-						selectedCount={selectedUris.size} // Use selectedUris
-						onCopy={handleCopy}
-						// Props for Explorer functionality
-						fileTreeData={fileTreeData}
-						selectedUris={selectedUris} // Pass selectedUris
-						onSelect={handleSelect} // Pass the handler
-						onRefresh={handleRefresh}
-						isLoading={isLoading}
-					/>
+					<ErrorBoundary>
+						<ContextTab
+							// Props for original Context functionality
+							selectedCount={selectedUris.size} // Use selectedUris
+							onCopy={handleCopy}
+							// Props for Explorer functionality
+							fileTreeData={fileTreeData}
+							selectedUris={selectedUris} // Pass selectedUris
+							onSelect={handleSelect} // Pass the handler
+							onRefresh={handleRefresh}
+							isLoading={isLoading}
+						/>
+					</ErrorBoundary>
 				</vscode-tab-panel>
 
 				{/* Apply Tab */}
@@ -451,12 +454,14 @@ function App() {
 					Apply
 				</vscode-tab-header>
 				<vscode-tab-panel id="apply-tab-panel">
-					<ApplyTab
-						onApply={handleApply}
-						onPreview={handlePreview}
-						onApplyRow={handleApplyRow}
-						onPreviewRow={handlePreviewRow}
-					/>
+					<ErrorBoundary>
+						<ApplyTab
+							onApply={handleApply}
+							onPreview={handlePreview}
+							onApplyRow={handleApplyRow}
+							onPreviewRow={handlePreviewRow}
+						/>
+					</ErrorBoundary>
 				</vscode-tab-panel>
 
 				{/* Settings Tab */}
@@ -464,12 +469,14 @@ function App() {
 					Settings
 				</vscode-tab-header>
 				<vscode-tab-panel id="settings-tab-panel">
-					<SettingsTab
-						excludedFolders={excludedFolders}
-						readGitignore={readGitignore}
-						onSaveSettings={handleSaveSettings}
-						onCopyDebugLogs={handleCopyDebugLogs}
-					/>
+					<ErrorBoundary>
+						<SettingsTab
+							excludedFolders={excludedFolders}
+							readGitignore={readGitignore}
+							onSaveSettings={handleSaveSettings}
+							onCopyDebugLogs={handleCopyDebugLogs}
+						/>
+					</ErrorBoundary>
 				</vscode-tab-panel>
 			</vscode-tabs>
 		</main>

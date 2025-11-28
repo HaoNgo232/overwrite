@@ -39,6 +39,7 @@ const MAX_PARALLEL = 8 // don't read more than N files at once
  */
 const MAX_CACHE_SIZE = 1000 // Maximum number of entries
 const MAX_CACHE_AGE_MS = 30 * 60 * 1000 // 30 minutes
+const EMERGENCY_CLEANUP_THRESHOLD = 1500 // Emergency cleanup trigger
 
 interface CacheEntry {
 	mtime: number
@@ -57,16 +58,27 @@ const cache = new Map<string, CacheEntry>()
 function isValidCacheEntry(entry: unknown): entry is CacheEntry {
 	if (!entry || typeof entry !== 'object') return false
 	const e = entry as Record<string, unknown>
+	
+	// Type checks
+	if (
+		typeof e.mtime !== 'number' ||
+		typeof e.size !== 'number' ||
+		typeof e.tokens !== 'number' ||
+		typeof e.lastAccessed !== 'number' ||
+		e.version !== CACHE_VERSION
+	) {
+		return false
+	}
+	
+	// Value validation - reject NaN, Infinity, and negative values
+	const isValidNumber = (n: number) => 
+		Number.isFinite(n) && n >= 0
+	
 	return (
-		typeof e.mtime === 'number' &&
-		typeof e.size === 'number' &&
-		typeof e.tokens === 'number' &&
-		typeof e.lastAccessed === 'number' &&
-		e.version === CACHE_VERSION &&
-		!Number.isNaN(e.mtime) &&
-		!Number.isNaN(e.size) &&
-		!Number.isNaN(e.tokens) &&
-		!Number.isNaN(e.lastAccessed)
+		isValidNumber(e.mtime as number) &&
+		isValidNumber(e.size as number) &&
+		isValidNumber(e.tokens as number) &&
+		isValidNumber(e.lastAccessed as number)
 	)
 }
 
@@ -76,6 +88,22 @@ function isValidCacheEntry(entry: unknown): entry is CacheEntry {
 function cleanupCache(): void {
 	const now = Date.now()
 	const entriesToRemove: string[] = []
+
+	// Emergency cleanup if cache is dangerously large
+	if (cache.size > EMERGENCY_CLEANUP_THRESHOLD) {
+		console.warn(
+			`[TokenCounter] Emergency cleanup triggered - cache size: ${cache.size}`,
+		)
+		// Remove oldest 50% of entries immediately
+		const sortedEntries = Array.from(cache.entries()).sort(
+			(a, b) => a[1].lastAccessed - b[1].lastAccessed,
+		)
+		const toRemove = sortedEntries.slice(0, Math.floor(cache.size / 2))
+		for (const [key] of toRemove) {
+			cache.delete(key)
+		}
+		return
+	}
 
 	// Remove entries older than MAX_CACHE_AGE_MS
 	for (const [key, entry] of cache.entries()) {
@@ -99,7 +127,7 @@ function cleanupCache(): void {
 
 	if (entriesToRemove.length > 0) {
 		console.debug(
-			`[TokenCounter] Cleaned up ${entriesToRemove.length} cache entries`,
+			`[TokenCounter] Cleaned up ${entriesToRemove.length} cache entries (size: ${cache.size})`,
 		)
 	}
 }

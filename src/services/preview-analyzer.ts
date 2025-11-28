@@ -130,7 +130,7 @@ async function calculateRewriteChanges(
 	}
 
 	try {
-		const targetUri = resolvePathToUri(fileAction.path, fileAction.root)
+		const targetUri = await resolvePathToUri(fileAction.path, fileAction.root)
 		const doc = await vscode.workspace.openTextDocument(targetUri)
 		removed = doc.lineCount
 	} catch {
@@ -160,7 +160,7 @@ async function calculateDeleteChanges(
 	fileAction: FileAction,
 ): Promise<ChangeSummary> {
 	try {
-		const targetUri = resolvePathToUri(fileAction.path, fileAction.root)
+		const targetUri = await resolvePathToUri(fileAction.path, fileAction.root)
 		const doc = await vscode.workspace.openTextDocument(targetUri)
 		return { added: 0, removed: doc.lineCount }
 	} catch {
@@ -209,11 +209,11 @@ function countLines(text: string): number {
 	return text.split('\n').length
 }
 
-function resolvePathToUri(p: string, root?: string): vscode.Uri {
+async function resolvePathToUri(p: string, root?: string): Promise<vscode.Uri> {
 	try {
-		// Try to use the existing path resolver
+		// Try to use the existing async path resolver
 		const { resolveXmlPathToUri } = require('../utils/path-resolver')
-		return resolveXmlPathToUri(p, root)
+		return await resolveXmlPathToUri(p, root)
 	} catch {
 		// Fallback: try to resolve as workspace-relative or absolute
 		const path = require('node:path')
