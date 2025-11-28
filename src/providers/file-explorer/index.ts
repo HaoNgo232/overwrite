@@ -613,22 +613,113 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 				includeXml,
 			)
 
-			// Copy to clipboard
-			await vscode.env.clipboard.writeText(prompt)
-			vscode.window.showInformationMessage('Context copied to clipboard!')
+			// Count tokens
+			const tokenCount = await encodeText(prompt)
 
-			// Track copy action with sampling (20%)
-			try {
-				// Count total tokens in the prompt
-				const tokenCount = await encodeText(prompt)
+			// Check if context is too large (> 100k tokens)
+			if (tokenCount > 100000) {
+				const tokenCountInK = Math.round(tokenCount / 1000)
+				const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+				const filename = `overwrite_context_${tokenCountInK}k-tokens_${timestamp}.txt`
 
-				telemetry.captureCopyAction({
-					token_count: tokenCount,
-					source: includeXml ? 'context_xml' : 'context',
-					selected_file_count: selectedUriStrings.size,
-				})
-			} catch (e) {
-				console.warn('[telemetry] failed to capture copy action', e)
+				// Determine workspace root for saving the file
+				const workspaceFolders = vscode.workspace.workspaceFolders
+				if (!workspaceFolders || workspaceFolders.length === 0) {
+					throw new Error('No workspace folder open to save the context file.')
+				}
+				// Use the first workspace folder as default
+				const rootUri = workspaceFolders[0].uri
+
+				// Create output folder if it doesn't exist
+				const outputFolderUri = vscode.Uri.joinPath(rootUri, 'overwrite-output')
+				try {
+					await vscode.workspace.fs.createDirectory(outputFolderUri)
+				} catch (error) {
+					// Folder may already exist, ignore error
+				}
+
+				const fileUri = vscode.Uri.joinPath(outputFolderUri, filename)
+
+				await vscode.workspace.fs.writeFile(
+					fileUri,
+					Buffer.from(prompt, 'utf8'),
+				)
+
+				// Cleanup old context files, keep only 5 most recent
+				try {
+					const files = await vscode.workspace.fs.readDirectory(outputFolderUri)
+					const contextFiles = files
+						.filter(
+							([name, type]) =>
+								type === vscode.FileType.File &&
+								name.startsWith('overwrite_context_') &&
+								name.endsWith('.txt'),
+						)
+						.map(([name]) => name)
+
+					if (contextFiles.length > 5) {
+						// Get file stats to sort by modification time
+						const fileStats = await Promise.all(
+							contextFiles.map(async (name) => {
+								const uri = vscode.Uri.joinPath(outputFolderUri, name)
+								const stat = await vscode.workspace.fs.stat(uri)
+								return { name, mtime: stat.mtime, uri }
+							}),
+						)
+
+						// Sort by modification time (newest first)
+						fileStats.sort((a, b) => b.mtime - a.mtime)
+
+						// Delete files beyond the 5 most recent
+						const filesToDelete = fileStats.slice(5)
+						for (const file of filesToDelete) {
+							await vscode.workspace.fs.delete(file.uri)
+							console.log(`[Overwrite] Deleted old context file: ${file.name}`)
+						}
+					}
+				} catch (error) {
+					// Log but don't fail if cleanup fails
+					console.warn(
+						'[Overwrite] Failed to cleanup old context files:',
+						error,
+					)
+				}
+
+				// Copy file path to clipboard (fallback)
+				await vscode.env.clipboard.writeText(fileUri.fsPath)
+
+				// Reveal file in OS file manager (so user can copy file object)
+				await vscode.commands.executeCommand('revealFileInOS', fileUri)
+
+				vscode.window.showInformationMessage(
+					`Context saved to overwrite-output/${filename}. File revealed in Explorer. Press Ctrl+C to copy.`,
+				)
+
+				// Track copy action (saved to file)
+				try {
+					telemetry.captureCopyAction({
+						token_count: tokenCount,
+						source: includeXml ? 'context_xml_file' : 'context_file',
+						selected_file_count: selectedUriStrings.size,
+					})
+				} catch (e) {
+					console.warn('[telemetry] failed to capture copy action', e)
+				}
+			} else {
+				// Copy to clipboard
+				await vscode.env.clipboard.writeText(prompt)
+				vscode.window.showInformationMessage('Context copied to clipboard!')
+
+				// Track copy action (clipboard)
+				try {
+					telemetry.captureCopyAction({
+						token_count: tokenCount,
+						source: includeXml ? 'context_xml' : 'context',
+						selected_file_count: selectedUriStrings.size,
+					})
+				} catch (e) {
+					console.warn('[telemetry] failed to capture copy action', e)
+				}
 			}
 		} catch (error) {
 			this._handleError(error, 'Error generating or copying context')

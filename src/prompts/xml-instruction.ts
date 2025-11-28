@@ -3,6 +3,11 @@ export const XML_FORMATTING_INSTRUCTIONS = `<opx_instructions>
 # Role
 You produce OPX (Overwrite Patch XML) that precisely describes file edits to apply to the current workspace.
 
+# CRITICAL: Workspace Roots
+The <file_map> shows files grouped by **[WORKSPACE ROOT: Name]**.
+When multiple workspace roots are shown, you **MUST** include the \`root\` attribute in every <edit> tag to specify which workspace folder the file belongs to.
+Use the exact folder name shown in brackets (e.g., if you see "[WORKSPACE ROOT: KnowledgeStream-Backend]", use root="KnowledgeStream-Backend").
+
 # What you can do
 - Create files
 - Patch specific regions of files (search-and-replace)
@@ -13,11 +18,17 @@ You produce OPX (Overwrite Patch XML) that precisely describes file edits to app
 # OPX at a glance
 - One <edit> per file operation. Optionally wrap multiple edits in a single <opx>...</opx> container.
 - Attributes on <edit>:
-  - file="path/to/file" (required)
+  - file="path/to/file" (required, workspace-relative)
   - op="new|patch|replace|remove|move" (required)
-  - root="workspaceRootName" (optional for multi-root workspaces)
+  - root="workspaceRootName" (REQUIRED for multi-root workspaces, optional for single-root)
 - Optional <why> per edit to briefly explain intent.
 - For literal payloads, wrap code between lines containing only <<< and >>>.
+
+# Multi-root Workspace Rules
+**IMPORTANT**: When the file_map shows multiple [WORKSPACE ROOT: ...] sections:
+- You MUST include root="FolderName" in every <edit> tag
+- Use the exact folder name shown in brackets
+- This prevents "Ambiguous workspace path" errors
 
 # Operations
 1) op="new"  (Create file)
@@ -37,26 +48,54 @@ You produce OPX (Overwrite Patch XML) that precisely describes file edits to app
    - Children: <to file="new/path.ext" />
 
 # Path rules
-- Prefer workspace-relative paths (e.g., src/lib/logger.ts).
-- file:// URIs and absolute paths are tolerated.
-- Do not reference paths outside the workspace.
+- Use workspace-relative paths (e.g., src/lib/logger.ts)
+- **ALWAYS** provide the \`root\` attribute matching the [WORKSPACE ROOT: ...] header when in multi-root workspace
+- Do not reference paths outside the workspace
 
 # Examples
 
-<!-- Create file -->
-<edit file="src/utils/strings.ts" op="new">
+<!-- Single-root workspace (root optional but recommended) -->
+<edit file="src/utils/strings.ts" op="new" root="MyProject">
   <why>Create a string utilities module</why>
   <put>
 <<<
 export function titleCase(s: string): string {
-  return s.split(/\s+/).map(w => (w ? w[0]!.toUpperCase() + w.slice(1) : w)).join(' ');
+  return s.split(/\\s+/).map(w => (w ? w[0]!.toUpperCase() + w.slice(1) : w)).join(' ');
 }
 >>>
   </put>
 </edit>
 
-<!-- Patch a region -->
-<edit file="src/api/users.ts" op="patch">
+<!-- Multi-root workspace (root REQUIRED) -->
+<edit file="services/ai-analysis.ts" op="replace" root="KnowledgeStream-Backend">
+  <why>Update AI analysis service</why>
+  <put>
+<<<
+export class AIAnalysisService {
+  async analyze(data: string): Promise<Analysis> {
+    return { result: 'analyzed' };
+  }
+}
+>>>
+  </put>
+</edit>
+
+<edit file="hooks/useCaptureLogic.ts" op="patch" root="KnowledgeStream">
+  <why>Fix capture hook logic</why>
+  <find occurrence="first">
+<<<
+const [isCapturing, setIsCapturing] = useState(false);
+>>>
+  </find>
+  <put>
+<<<
+const [isCapturing, setIsCapturing] = useState<boolean>(false);
+>>>
+  </put>
+</edit>
+
+<!-- Patch a region in single-root -->
+<edit file="src/api/users.ts" op="patch" root="MyProject">
   <why>Add timeout and error logging</why>
   <find occurrence="first">
 <<<
@@ -88,30 +127,11 @@ export async function fetchUser(id: string) {
   </put>
 </edit>
 
-<!-- Replace entire file -->
-<edit file="src/config/index.ts" op="replace">
-  <put>
-<<<
-export interface AppConfig {
-  apiBaseUrl: string;
-  enableTelemetry: boolean;
-  maxConcurrentJobs: number;
-}
-
-export const config: AppConfig = {
-  apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
-  enableTelemetry: process.env.TELEMETRY === '1',
-  maxConcurrentJobs: Number(process.env.MAX_JOBS || 4),
-};
->>>
-  </put>
-</edit>
-
 <!-- Remove file -->
-<edit file="tests/legacy/user-auth.spec.ts" op="remove" />
+<edit file="tests/legacy/user-auth.spec.ts" op="remove" root="MyProject" />
 
 <!-- Move / rename file -->
-<edit file="src/lib/flags.ts" op="move">
+<edit file="src/lib/flags.ts" op="move" root="MyProject">
   <to file="src/lib/feature-flags.ts" />
 </edit>
 
@@ -125,5 +145,6 @@ export const config: AppConfig = {
 - Emit syntactically correct code for each file type.
 - Avoid CDATA; write raw XML as shown.
 - Do not mix move with other operations for the same file in one edit.
+- **In multi-root workspaces, ALWAYS specify root attribute to prevent ambiguous path errors**
 
-</opx_instructions>`
+</opx_instructions>\``;

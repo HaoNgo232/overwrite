@@ -48,7 +48,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "biome check src --apply",
+    "lint": "biome check src --write",
     "test": "vscode-test",
     "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
     "build:esbuild": "node esbuild.js",

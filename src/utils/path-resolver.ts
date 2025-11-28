@@ -60,8 +60,51 @@ export function resolveXmlPathToUri(
 				return uri
 			}
 		}
+
+		// NEW: Smart auto-resolution for multi-workspace
+		// Try to find the file in all workspace folders
+		const normalized = normalizeRelative(specPath)
+		const candidateUris: vscode.Uri[] = []
+		const candidateFolders: string[] = []
+
+		for (const folder of folders) {
+			const candidateUri = vscode.Uri.joinPath(folder.uri, normalized)
+			try {
+				// Use VS Code's synchronous file system check
+				const stat = vscode.workspace.fs.stat(candidateUri)
+				// If we get here without throwing, file exists
+				candidateUris.push(candidateUri)
+				candidateFolders.push(folder.name)
+			} catch {
+				// File doesn't exist in this folder, continue
+			}
+		}
+
+		if (candidateUris.length === 1) {
+			// Found exactly one match - use it!
+			console.log(
+				`[Overwrite] Auto-detected workspace folder for "${specPath}": ${candidateFolders[0]}`,
+			)
+			ensureInsideWorkspace(candidateUris[0])
+			return candidateUris[0]
+		}
+
+		if (candidateUris.length > 1) {
+			throw new Error(
+				`Ambiguous workspace path "${specPath}". File exists in multiple folders: ${candidateFolders.join(
+					', ',
+				)}. Please specify root attribute or use "<rootName>:<relative/path>" format.`,
+			)
+		}
+
+		// File doesn't exist in any folder (e.g., creating new file)
+		// In this case, we can't auto-detect, so provide helpful error
 		throw new Error(
-			`Ambiguous workspace path "${specPath}". Provide a root attribute or use "<rootName>:<relative/path>" format.`,
+			`Cannot resolve "${specPath}" - file not found in any workspace folder. Available folders: ${folders
+				.map((f) => f.name)
+				.join(
+					', ',
+				)}. For new files, please specify root attribute or use "<rootName>:<relative/path>" format.`,
 		)
 	}
 
@@ -74,7 +117,7 @@ export function resolveXmlPathToUri(
 function normalizeRelative(p: string): string {
 	// Only trim leading "./" or ".\\" (not bare dotfiles like ".env") and convert backslashes to slashes
 	const withoutLeadingDotSlash = p.replace(/^[.]\//, '').replace(/^[.]\\/, '')
-	const posix = withoutLeadingDotSlash.replace(/\\/g, '/')
+	const posix = withoutLeadingDotSlash.replaceAll('\\', '/')
 	return posix
 }
 
