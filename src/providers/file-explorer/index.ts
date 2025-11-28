@@ -40,7 +40,23 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 	private _treeBuildTimeout: NodeJS.Timeout | null = null // Timeout for tree building
 	private _treeBuildAbortController: AbortController | null = null // Abort controller for cancellation
 	// Always-excluded patterns that never show in the UI; keep minimal (.git only)
-	private readonly _excludedDirs = ['.git', '.hg', '.svn']
+	private readonly _excludedDirs = [
+		'.git',
+		'.hg',
+		'.svn',
+		'node_modules',
+		'dist',
+		'build',
+		'out',
+		'coverage',
+		'.next',
+		'.nuxt',
+		'target',
+		'vendor',
+		'bin',
+		'obj',
+		'.cache',
+	]
 	private static readonly EXCLUDED_FOLDERS_KEY = 'overwrite.excludedFolders'
 	private static readonly READ_GITIGNORE_KEY = 'overwrite.readGitignore'
 
@@ -504,11 +520,11 @@ export class FileExplorerWebviewProvider implements vscode.WebviewViewProvider {
 				this._treeBuildTimeout = setTimeout(() => {
 					reject(
 						new Error(
-							'Tree building timed out after 10 seconds. ' +
+							'Tree building timed out after 30 seconds. ' +
 								'Try: 1) Reduce excluded folders, 2) Disable .gitignore, or 3) Use smaller workspace',
 						),
 					)
-				}, 10000) //  Changed from 30000 to 10000
+				}, 30000) //  Changed from 10000 to 30000
 			})
 
 			// Parse excluded patterns

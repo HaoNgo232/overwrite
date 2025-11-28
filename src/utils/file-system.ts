@@ -358,82 +358,107 @@ export async function getWorkspaceFileTree(
 		const allIgnoreLines: string[] = []
 
 		if (useGitignore) {
-			// 1) Project .gitignore (root)
-			const gitignorePath = path.join(rootFsPath, '.gitignore')
-			try {
-				const bytes = await vscode.workspace.fs.readFile(
-					vscode.Uri.file(gitignorePath),
-				)
-				const content = Buffer.from(bytes).toString('utf8')
-				allIgnoreLines.push(...content.split(/\r?\n/))
-			} catch {
-				// No .gitignore at repo root; ignore quietly
-			}
-
-			// 2) Repo-specific excludes: .git/info/exclude
-			const repoExcludePath = path.join(rootFsPath, '.git', 'info', 'exclude')
-			try {
-				const content = fs.readFileSync(repoExcludePath, 'utf8')
-				allIgnoreLines.push(...content.split(/\r?\n/))
-			} catch {
-				// Not present or unreadable; ignore quietly
-			}
-
-			// 3) Global excludes file as configured in Git (core.excludesFile)
-			//  Use cached path to avoid blocking git calls on every tree build
-			try {
-				let excludesPath = cachedGlobalExcludesPath
-
-				// If not cached, try to fetch it once per session
-				if (excludesPath === null) {
-					try {
-						excludesPath = execFileSync(
-							'git',
-							['config', '--get', 'core.excludesFile'],
-							{
-								cwd: rootFsPath,
-								encoding: 'utf8',
-								stdio: ['ignore', 'pipe', 'ignore'],
-								timeout: 1000, //  Fail fast if git hangs
-							},
-						).trim()
-						cachedGlobalExcludesPath = excludesPath
-						console.debug(
-							'[FileSystem] Cached git core.excludesFile:',
-							excludesPath,
-						)
-					} catch {
-						cachedGlobalExcludesPath = '' // Mark as checked but failed/empty
-						excludesPath = ''
-					}
-				}
-
-				if (excludesPath) {
-					const resolved = resolveExcludesPath(excludesPath)
-					if (resolved && fs.existsSync(resolved)) {
-						const content = fs.readFileSync(resolved, 'utf8')
-						allIgnoreLines.push(...content.split(/\r?\n/))
-					}
-				}
-			} catch {
-				// Git not available or no core.excludesFile set; try common fallbacks
-				const candidates = [
-					path.join(os.homedir(), '.config', 'git', 'ignore'),
-					path.join(os.homedir(), '.gitignore_global'),
-					path.join(os.homedir(), '.gitignore'),
-				]
-				for (const p of candidates) {
-					try {
-						if (fs.existsSync(p)) {
-							const content = fs.readFileSync(p, 'utf8')
-							allIgnoreLines.push(...content.split(/\r?\n/))
-							break
+			// Parallelize reading of ignore files to reduce blocking time
+			const [gitignoreContent, repoExcludeContent, globalExcludeContent] =
+				await Promise.all([
+					// 1) Project .gitignore (root)
+					(async () => {
+						const gitignorePath = path.join(rootFsPath, '.gitignore')
+						try {
+							const bytes = await vscode.workspace.fs.readFile(
+								vscode.Uri.file(gitignorePath),
+							)
+							return Buffer.from(bytes).toString('utf8')
+						} catch {
+							return ''
 						}
-					} catch {
-						// keep trying others
-					}
-				}
-			}
+					})(),
+
+					// 2) Repo-specific excludes: .git/info/exclude
+					(async () => {
+						const repoExcludePath = path.join(
+							rootFsPath,
+							'.git',
+							'info',
+							'exclude',
+						)
+						try {
+							// Use async fs.readFile instead of readFileSync
+							return await fs.promises.readFile(repoExcludePath, 'utf8')
+						} catch {
+							return ''
+						}
+					})(),
+
+					// 3) Global excludes file
+					(async () => {
+						try {
+							let excludesPath = cachedGlobalExcludesPath
+
+							// If not cached, try to fetch it once per session
+							if (excludesPath === null) {
+								try {
+									// execFile is async, but execFileSync is not.
+									// For simplicity in this refactor without changing imports too much,
+									// we'll wrap the sync call in a promise or just keep it sync if it's fast enough.
+									// However, to truly parallelize, we should avoid blocking.
+									// Since execFileSync is blocking, we can't easily make it async without execFile.
+									// But we can at least run the file reading part async if we have the path.
+									// Let's stick to the current logic for getting the path (it's cached anyway),
+									// but make the file reading async.
+
+									excludesPath = execFileSync(
+										'git',
+										['config', '--get', 'core.excludesFile'],
+										{
+											cwd: rootFsPath,
+											encoding: 'utf8',
+											stdio: ['ignore', 'pipe', 'ignore'],
+											timeout: 1000,
+										},
+									).trim()
+									cachedGlobalExcludesPath = excludesPath
+								} catch {
+									cachedGlobalExcludesPath = ''
+									excludesPath = ''
+								}
+							}
+
+							if (excludesPath) {
+								const resolved = resolveExcludesPath(excludesPath)
+								if (resolved && fs.existsSync(resolved)) {
+									return await fs.promises.readFile(resolved, 'utf8')
+								}
+							} else {
+								// Git not available or no core.excludesFile set; try common fallbacks
+								const candidates = [
+									path.join(os.homedir(), '.config', 'git', 'ignore'),
+									path.join(os.homedir(), '.gitignore_global'),
+									path.join(os.homedir(), '.gitignore'),
+								]
+								for (const p of candidates) {
+									try {
+										if (fs.existsSync(p)) {
+											return await fs.promises.readFile(p, 'utf8')
+										}
+									} catch {
+										// keep trying others
+									}
+								}
+							}
+						} catch {
+							// Ignore errors
+						}
+						return ''
+					})(),
+				])
+
+			if (gitignoreContent)
+				allIgnoreLines.push(...gitignoreContent.split(/\r?\n/))
+			if (repoExcludeContent)
+				allIgnoreLines.push(...repoExcludeContent.split(/\r?\n/))
+			if (globalExcludeContent)
+				allIgnoreLines.push(...globalExcludeContent.split(/\r?\n/))
 		}
 
 		let ign = ignore()
