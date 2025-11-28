@@ -26,29 +26,41 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 
 	const buildFixInstructions = (includeOPX: boolean): string[] => {
 		const base = [
-			'# Instructions',
+			'---',
 			'',
-			'Please analyze the errors above and understand the current state of each file.',
+			'# 🎯 ROLE: Expert Code Patcher',
 			'',
-			'Key points to fix:',
-			'1. Search patterns that failed to match - they need to match the CURRENT file content',
-			'2. Cascade failures - previous operations changed the file, update your patterns accordingly',
-			'3. File structure - ensure you understand the full context of each file',
+			'You are a specialist at fixing failed file operations. The operations above failed because:',
+			'- **Search mismatches**: `<find>` blocks didn\'t match current file content',
+			'- **Cascade failures**: Previous successful operations changed files, breaking later patterns',
 			'',
-			'For cascade failures:',
-			'- Update search patterns to match the file state AFTER previous operations',
-			'- Consider using occurrence="last" if multiple matches exist',
-			'- Make search patterns more specific by including more surrounding context',
+			'## CRITICAL RULES',
+			'1. **Account for successful operations** - Files with ✅ are ALREADY modified',
+			'2. **Update search patterns** - Match the CURRENT file state, not the original',
+			'3. **Be precise** - Include enough context to match exactly once',
+			'4. **Use occurrence** - Add `occurrence="first|last|N"` when needed',
 			'',
 		]
 
 		if (includeOPX) {
 			base.push(
-				'Generate new OPX with corrected operations based on the current file states.',
-			)
-		} else {
-			base.push(
-				'Provide the corrected code changes that should be applied to fix these issues.',
+				'## OUTPUT: Corrected OPX',
+				'Generate valid OPX that will succeed. Example:',
+				'```xml',
+				'<edit file="path.ts" op="patch">',
+				'  <find occurrence="first">',
+				'<<<',
+				'Current file content (after successful operations)',
+				'>>>',
+				'  </find>',
+				'  <put>',
+				'<<<',
+				'New content',
+				'>>>',
+				'  </put>',
+				'</edit>',
+				'```',
+				'',
 			)
 		}
 
@@ -240,16 +252,13 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 		failedRows: RowApplyResult[],
 		allRows: RowApplyResult[],
 	): string[] => [
-		'# Complete Apply Context for AI',
-		'',
-		'## Apply Results Summary',
-		`-  Successful operations: ${successRows.length}`,
-		`- ❌ Failed operations: ${failedRows.length}`,
-		`- 📊 Total operations: ${allRows.length}`,
-		'',
-		'---',
-		'',
-	]
+			'# 🔧 Apply Operation Failures',
+			'',
+			`**Results**: ✅ ${successRows.length} success, ❌ ${failedRows.length} failed (${Math.round((successRows.length / allRows.length) * 100)}% success rate)`,
+			'',
+			'---',
+			'',
+		]
 
 	const buildFailedOperationsSection = (
 		fileErrors: Map<
@@ -307,9 +316,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
 						'',
 						'---',
 						'',
-						'## 📄 Complete Original XML Input (For Chat AI Context)',
-						'',
-						'Here is the complete OPX/XML that was submitted:',
+						'## 📄 Original OPX',
 						'',
 						'```xml',
 						responseText,
