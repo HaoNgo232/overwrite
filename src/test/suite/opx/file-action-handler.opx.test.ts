@@ -6,7 +6,7 @@ import * as vscode from 'vscode'
 import { applyFileActions } from '../../../providers/file-explorer/file-action-handler'
 import { parseXmlResponse } from '../../../utils/xml-parser'
 
-const baseDir = path.join(os.tmpdir(), 'overwrite-opx-tests')
+let baseDir: string
 
 async function writeFile(absRel: string, content: string): Promise<vscode.Uri> {
 	const abs = path.isAbsolute(absRel) ? absRel : path.join(baseDir, absRel)
@@ -33,6 +33,9 @@ async function removePath(absRel: string): Promise<void> {
 
 describe('applyFileActions with OPX', () => {
 	before(async () => {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+		assert.ok(workspaceFolder, 'No workspace folder is open for OPX tests')
+		baseDir = path.join(workspaceFolder.uri.fsPath, '.overwrite-opx-tests')
 		await vscode.workspace.fs.createDirectory(vscode.Uri.file(baseDir))
 	})
 

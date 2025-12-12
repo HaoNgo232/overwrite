@@ -134,11 +134,13 @@ function analyzeByteContent(chunk: Uint8Array): boolean {
 			nullByteCount++
 		}
 		// Count non-printable characters (excluding common whitespace)
-		else if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
-			nonPrintableCount++
-		}
-		// Very high bytes that are uncommon in text
-		else if (byte > 126) {
+		else if (
+			byte < 32 &&
+			byte !== 9 && // tab
+			byte !== 10 && // LF
+			byte !== 12 && // FF
+			byte !== 13 // CR
+		) {
 			nonPrintableCount++
 		}
 	}
@@ -160,6 +162,56 @@ export function looksBinary(chunk: Uint8Array): boolean {
 	// First check magic numbers (most reliable)
 	if (checkMagicNumbers(chunk)) {
 		return true
+	}
+
+	// Do not treat common text encodings as binary (even if they contain null bytes).
+	// UTF-8 BOM: EF BB BF
+	if (
+		chunk.length >= 3 &&
+		chunk[0] === 0xef &&
+		chunk[1] === 0xbb &&
+		chunk[2] === 0xbf
+	) {
+		return false
+	}
+
+	// UTF-16 BOMs: FF FE (LE) or FE FF (BE)
+	if (chunk.length >= 2) {
+		const b0 = chunk[0]
+		const b1 = chunk[1]
+		if ((b0 === 0xff && b1 === 0xfe) || (b0 === 0xfe && b1 === 0xff)) {
+			return false
+		}
+	}
+
+	// Heuristic: UTF-16 text often has NUL bytes in either even or odd positions.
+	// If NULs are concentrated in one parity, treat as text (not binary).
+	if (chunk.length >= 16) {
+		let evenZeros = 0
+		let oddZeros = 0
+		let evenCount = 0
+		let oddCount = 0
+
+		for (let i = 0; i < chunk.length; i++) {
+			if (i % 2 === 0) {
+				evenCount++
+				if (chunk[i] === 0) evenZeros++
+			} else {
+				oddCount++
+				if (chunk[i] === 0) oddZeros++
+			}
+		}
+
+		const evenZeroRatio = evenCount > 0 ? evenZeros / evenCount : 0
+		const oddZeroRatio = oddCount > 0 ? oddZeros / oddCount : 0
+
+		// Concentrated zeros in one parity is a strong UTF-16 signal.
+		if (
+			(evenZeroRatio > 0.4 && oddZeroRatio < 0.05) ||
+			(oddZeroRatio > 0.4 && evenZeroRatio < 0.05)
+		) {
+			return false
+		}
 	}
 
 	// Then analyze byte content
