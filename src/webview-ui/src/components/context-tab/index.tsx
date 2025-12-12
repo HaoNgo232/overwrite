@@ -452,15 +452,21 @@ const ContextTab: React.FC<ContextTabProps> = ({
 							⚠️ Skipped Files ({skippedFiles.length})
 						</summary>
 						<div className="mt-1">
-							{skippedFiles.map((file) => (
-								<div key={file.uri} className="mb-0.5">
-									<span className="font-mono">{file.uri.split('/').pop()}</span>
-									{' - '}
-									<span className="italic">
-										{getSkipReasonLabel(file.reason, file.message)}
-									</span>
-								</div>
-							))}
+							{skippedFiles.map((file) => {
+								// Decode URI to show readable filename (fixes URL-encoded names like %C3%9D%20...)
+								const fileName = decodeURIComponent(
+									file.uri.split('/').pop() || file.uri,
+								)
+								return (
+									<div key={file.uri} className="mb-0.5">
+										<span className="font-mono">{fileName}</span>
+										{' - '}
+										<span className="italic">
+											{getSkipReasonLabel(file.reason, file.message)}
+										</span>
+									</div>
+								)
+							})}
 						</div>
 					</details>
 				)}

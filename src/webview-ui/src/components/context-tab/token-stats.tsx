@@ -37,22 +37,28 @@ const TokenStats: React.FC<TokenStatsProps> = ({
 					<p className="font-semibold mb-1">
 						⚠️ Skipped Files ({skippedFiles.length}):
 					</p>
-					{skippedFiles.map((file, index) => (
-						<div key={index} className="mb-0.5">
-							<span className="font-mono">{file.uri.split('/').pop()}</span>
-							{' - '}
-							<span className="italic">
-								{file.reason === 'binary'
-									? 'Binary file'
-									: file.reason === 'too-large'
-										? 'Too large'
-										: 'Error'}
-							</span>
-							{file.message && (
-								<span className="text-muted"> ({file.message})</span>
-							)}
-						</div>
-					))}
+					{skippedFiles.map((file, index) => {
+						// Decode URI to show readable filename (fixes URL-encoded names like %C3%9D%20...)
+						const fileName = decodeURIComponent(
+							file.uri.split('/').pop() || file.uri,
+						)
+						return (
+							<div key={index} className="mb-0.5">
+								<span className="font-mono">{fileName}</span>
+								{' - '}
+								<span className="italic">
+									{file.reason === 'binary'
+										? 'Binary file'
+										: file.reason === 'too-large'
+											? 'Too large'
+											: 'Error'}
+								</span>
+								{file.message && (
+									<span className="text-muted"> ({file.message})</span>
+								)}
+							</div>
+						)
+					})}
 				</div>
 			)}
 		</>
